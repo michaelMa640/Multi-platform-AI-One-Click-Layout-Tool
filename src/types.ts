@@ -1,0 +1,149 @@
+export type AppView =
+  | "workspace"
+  | "templates"
+  | "review"
+  | "exports"
+  | "settings";
+
+export type NavItem = {
+  key: AppView;
+  label: string;
+  hint: string;
+};
+
+export type MetricCard = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
+export type SourceType =
+  | "url"
+  | "markdown"
+  | "txt"
+  | "html"
+  | "doc"
+  | "docx";
+
+export type SectionType =
+  | "intro"
+  | "content"
+  | "quote"
+  | "highlight"
+  | "conclusion";
+
+export type ReviewIssueType =
+  | "typo"
+  | "logic"
+  | "consistency"
+  | "style";
+
+export type TemplateKind = "builtin" | "extracted" | "variant" | "draft";
+
+export type TemplateStatus = "active" | "disabled" | "draft";
+
+export type PlatformName =
+  | "wechat"
+  | "xiaohongshu"
+  | "weibo"
+  | "linkedin"
+  | "instagram"
+  | "x"
+  | "facebook";
+
+export type PlatformFormat = "html" | "article" | "carousel" | "image_set";
+
+export type ArticleSection = {
+  id: string;
+  type: SectionType;
+  heading?: string;
+  body: string;
+  points?: string[];
+  stats?: Array<{ label: string; value: string }>;
+};
+
+export type ReviewIssue = {
+  id: string;
+  type: ReviewIssueType;
+  title: string;
+  detail: string;
+  severity: "low" | "medium" | "high";
+  sectionId?: string;
+};
+
+export type ReviewResult = {
+  lastReviewedAt?: string;
+  issues: ReviewIssue[];
+  suggestions: string[];
+};
+
+export type PlatformVariant = {
+  platform: PlatformName;
+  format: PlatformFormat;
+  status: "draft" | "generated" | "reviewed";
+};
+
+export type ArticleProject = {
+  id: string;
+  sourceType: SourceType;
+  title: string;
+  summary: string;
+  sourceUrl?: string;
+  coverImage?: string;
+  tags: string[];
+  styleTemplateId: string;
+  sections: ArticleSection[];
+  reviewResult?: ReviewResult;
+  platformVariants: PlatformVariant[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TemplateTheme = {
+  primary: string;
+  primarySoft: string;
+  accent: string;
+  background: string;
+  textMain: string;
+};
+
+export type TemplateDefinition = {
+  id: string;
+  name: string;
+  kind: TemplateKind;
+  status: TemplateStatus;
+  summary: string;
+  useCases: string[];
+  supportsExtraction: boolean;
+  theme: TemplateTheme;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PersistedWorkspace = {
+  version: 1;
+  currentProjectId: string;
+  projects: ArticleProject[];
+  templates: TemplateDefinition[];
+  lastSavedAt?: string;
+};
+
+export type WorkspaceState = {
+  currentProjectId: string;
+  projects: ArticleProject[];
+  templates: TemplateDefinition[];
+  hydrated: boolean;
+  lastSavedAt?: string;
+};
+
+export type WorkspaceContextValue = WorkspaceState & {
+  currentProject: ArticleProject | undefined;
+  createProject: () => void;
+  selectProject: (projectId: string) => void;
+  updateProjectMeta: (
+    patch: Partial<Pick<ArticleProject, "title" | "summary" | "sourceType" | "sourceUrl">>,
+  ) => void;
+  updateProjectTags: (tags: string[]) => void;
+  saveWorkspace: () => void;
+  resetWorkspace: () => void;
+};
