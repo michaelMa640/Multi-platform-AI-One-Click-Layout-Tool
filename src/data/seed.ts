@@ -1,41 +1,15 @@
 import { builtInTemplates } from "./templates";
+import { analyzeArticle } from "../review/analyzeArticle";
 import type {
   ArticleProject,
   PersistedWorkspace,
-  ReviewIssue,
   WorkspaceState,
 } from "../types";
-
-function buildSeedIssues(): ReviewIssue[] {
-  return [
-    {
-      id: crypto.randomUUID(),
-      type: "typo",
-      title: "检查术语一致性",
-      detail: "“模板提取”与“模板抽取”建议统一用词，避免页面内表达来回切换。",
-      severity: "low",
-    },
-    {
-      id: crypto.randomUUID(),
-      type: "logic",
-      title: "补充导出闭环说明",
-      detail: "在介绍多平台能力时，建议明确“先 HTML/CSS，再导出图片”的统一路径。",
-      severity: "medium",
-    },
-    {
-      id: crypto.randomUUID(),
-      type: "consistency",
-      title: "补充 DOC 导入限制",
-      detail: "建议在产品说明中强调 DOC 优先走转换兼容，避免用户误解为与 DOCX 同等稳定。",
-      severity: "medium",
-    },
-  ];
-}
 
 export function createSeedProject(templateId = builtInTemplates[0].id): ArticleProject {
   const now = new Date().toISOString();
 
-  return {
+  const project: ArticleProject = {
     id: crypto.randomUUID(),
     sourceType: "markdown",
     title: "微信公众号 AI 排版工具 V1 工作项目",
@@ -65,20 +39,17 @@ export function createSeedProject(templateId = builtInTemplates[0].id): ArticleP
         body: "前端骨架已经就位，现在可以把数据层接上，为 Step 3 的导入与解析提供真实存储容器。",
       },
     ],
-    reviewResult: {
-      lastReviewedAt: now,
-      issues: buildSeedIssues(),
-      suggestions: [
-        "在模板管理页增加模板来源和状态标签。",
-        "在项目工作台展示最后保存时间和当前模板名。",
-      ],
-    },
     platformVariants: [
       { platform: "wechat", format: "html", status: "draft" },
       { platform: "xiaohongshu", format: "image_set", status: "draft" },
     ],
     createdAt: now,
     updatedAt: now,
+  };
+
+  return {
+    ...project,
+    reviewResult: analyzeArticle(project),
   };
 }
 

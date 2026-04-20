@@ -165,6 +165,7 @@ export type WorkspaceContextValue = WorkspaceState & {
   applyProjectDraft: (
     patch: Pick<ArticleProject, "title" | "summary" | "tags" | "sections">,
   ) => void;
+  updateProjectReviewResult: (reviewResult: ReviewResult) => void;
   addProjectSection: () => void;
   removeProjectSection: (sectionId: string) => void;
   moveProjectSection: (sectionId: string, direction: "up" | "down") => void;

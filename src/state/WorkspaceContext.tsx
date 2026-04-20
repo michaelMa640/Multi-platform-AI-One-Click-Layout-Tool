@@ -7,7 +7,15 @@ import {
 } from "react";
 import { createInitialWorkspaceState, createSeedProject, toPersistedWorkspace } from "../data/seed";
 import { clearWorkspaceState, loadWorkspaceState, saveWorkspaceState } from "../lib/workspaceStorage";
-import type { ArticleProject, ArticleSection, TemplateDefinition, TemplateStatus, WorkspaceContextValue, WorkspaceState } from "../types";
+import type {
+  ArticleProject,
+  ArticleSection,
+  ReviewResult,
+  TemplateDefinition,
+  TemplateStatus,
+  WorkspaceContextValue,
+  WorkspaceState,
+} from "../types";
 
 type WorkspaceAction =
   | { type: "createProject"; payload: { project: ArticleProject } }
@@ -38,6 +46,13 @@ type WorkspaceAction =
       payload: {
         projectId: string;
         patch: Pick<ArticleProject, "title" | "summary" | "tags" | "sections">;
+      };
+    }
+  | {
+      type: "updateProjectReviewResult";
+      payload: {
+        projectId: string;
+        reviewResult: ReviewResult;
       };
     }
   | { type: "addProjectSection"; payload: { projectId: string; section: ArticleSection } }
@@ -132,6 +147,12 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return patchProject(state, action.payload.projectId, (project) => ({
         ...project,
         ...action.payload.patch,
+        updatedAt: new Date().toISOString(),
+      }));
+    case "updateProjectReviewResult":
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        reviewResult: action.payload.reviewResult,
         updatedAt: new Date().toISOString(),
       }));
     case "addProjectSection":
@@ -288,6 +309,16 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         dispatch({
           type: "applyProjectDraft",
           payload: { projectId: currentProject.id, patch },
+        });
+      },
+      updateProjectReviewResult: (reviewResult) => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "updateProjectReviewResult",
+          payload: { projectId: currentProject.id, reviewResult },
         });
       },
       addProjectSection: () => {
