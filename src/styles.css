@@ -351,6 +351,19 @@ button {
   gap: 12px;
 }
 
+.control-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(246, 250, 244, 0.92);
+}
+
+.block-title {
+  color: #2b3a2d;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -375,6 +388,64 @@ button {
 
 .field textarea {
   resize: vertical;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px dashed rgba(91, 120, 92, 0.28);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #4d5d4d;
+}
+
+.upload-field input[type="file"] {
+  width: 100%;
+}
+
+.inline-options,
+.project-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.option-chip,
+.project-chip {
+  border: 1px solid rgba(91, 120, 92, 0.16);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #314233;
+  cursor: pointer;
+}
+
+.option-chip.active,
+.project-chip.active {
+  background: #e9f2e6;
+  border-color: rgba(93, 137, 96, 0.35);
+  color: #2f6c37;
+  font-weight: 700;
+}
+
+.status-box {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f4f6f3;
+  color: #526152;
+  font-size: 13px;
+}
+
+.status-box.success {
+  background: #edf6ea;
+  color: #2f6c37;
+}
+
+.status-box.error {
+  background: #fff1ef;
+  color: #b44736;
 }
 
 .section-card {

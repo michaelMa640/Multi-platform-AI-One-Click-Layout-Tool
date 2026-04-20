@@ -1,10 +1,31 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { importArticle } from "../importers/articleImporter";
 import { useWorkspace } from "../state/WorkspaceContext";
-import type { MetricCard } from "../types";
+import type { ImportStatus, MetricCard, SourceType } from "../types";
+
+const textImportOptions: Array<{ label: string; value: Extract<SourceType, "markdown" | "txt" | "html"> }> = [
+  { label: "Markdown", value: "markdown" },
+  { label: "纯文本", value: "txt" },
+  { label: "HTML", value: "html" },
+];
 
 export function WorkspacePage() {
-  const { currentProject, templates, updateProjectMeta, updateProjectTags, resetWorkspace } =
-    useWorkspace();
+  const {
+    currentProject,
+    projects,
+    templates,
+    importProject,
+    selectProject,
+    updateProjectMeta,
+    updateProjectTags,
+    resetWorkspace,
+  } = useWorkspace();
+  const [textSourceType, setTextSourceType] = useState<Extract<SourceType, "markdown" | "txt" | "html">>("markdown");
+  const [rawInput, setRawInput] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+  const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
+  const [importMessage, setImportMessage] = useState("准备好导入原始内容。");
+  const [isImporting, setIsImporting] = useState(false);
 
   const metrics: MetricCard[] = useMemo(
     () => [
@@ -21,7 +42,7 @@ export function WorkspacePage() {
       {
         label: "导入源",
         value: "6 类",
-        detail: "URL / MD / TXT / HTML / DOC / DOCX",
+        detail: "URL / MD / TXT / HTML / DOCX / DOC",
       },
     ],
     [currentProject, templates.length],
@@ -30,6 +51,83 @@ export function WorkspacePage() {
   if (!currentProject) {
     return null;
   }
+
+  const runTextImport = async () => {
+    setIsImporting(true);
+    setImportStatus("idle");
+
+    try {
+      const project = await importArticle({
+        kind: "text",
+        sourceType: textSourceType,
+        value: rawInput,
+      });
+
+      importProject(project);
+      setImportStatus("success");
+      setImportMessage(`已从${textSourceType.toUpperCase()}内容生成新项目。`);
+      setRawInput("");
+    } catch (error) {
+      setImportStatus("error");
+      setImportMessage(error instanceof Error ? error.message : "文本导入失败。");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const runUrlImport = async () => {
+    setIsImporting(true);
+    setImportStatus("idle");
+
+    try {
+      const project = await importArticle({
+        kind: "url",
+        value: urlInput,
+      });
+
+      importProject(project);
+      setImportStatus("success");
+      setImportMessage("URL 导入成功，已创建新项目。");
+      setUrlInput("");
+    } catch (error) {
+      setImportStatus("error");
+      setImportMessage(
+        error instanceof Error
+          ? error.message
+          : "URL 导入失败，可能是目标站点不可直连或被浏览器拦截。",
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const onFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setIsImporting(true);
+    setImportStatus("idle");
+
+    try {
+      const project = await importArticle({
+        kind: "file",
+        file,
+      });
+
+      importProject(project);
+      setImportStatus("success");
+      setImportMessage(`文件导入成功：${file.name}`);
+    } catch (error) {
+      setImportStatus("error");
+      setImportMessage(error instanceof Error ? error.message : "文件导入失败。");
+    } finally {
+      event.target.value = "";
+      setIsImporting(false);
+    }
+  };
 
   return (
     <section className="page-grid workspace-grid">
@@ -63,9 +161,81 @@ export function WorkspacePage() {
         <article className="panel-card">
           <div className="panel-heading">
             <p className="eyebrow">LEFT</p>
-            <h4>当前项目元信息</h4>
+            <h4>导入与项目控制区</h4>
           </div>
           <div className="form-stack">
+            <div className="control-block">
+              <strong className="block-title">当前项目</strong>
+              <div className="project-list">
+                {projects.map((project) => (
+                  <button
+                    key={project.id}
+                    className={project.id === currentProject.id ? "project-chip active" : "project-chip"}
+                    onClick={() => selectProject(project.id)}
+                    type="button"
+                  >
+                    {project.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="control-block">
+              <strong className="block-title">URL 导入</strong>
+              <label className="field">
+                <span>文章链接</span>
+                <input
+                  value={urlInput}
+                  onChange={(event) => setUrlInput(event.target.value)}
+                  placeholder="https://..."
+                  type="url"
+                />
+              </label>
+              <button className="primary-button" disabled={isImporting} onClick={runUrlImport} type="button">
+                {isImporting ? "导入中..." : "导入 URL"}
+              </button>
+            </div>
+
+            <div className="control-block">
+              <strong className="block-title">文本导入</strong>
+              <div className="inline-options">
+                {textImportOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    className={option.value === textSourceType ? "option-chip active" : "option-chip"}
+                    onClick={() => setTextSourceType(option.value)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <label className="field">
+                <span>原始内容</span>
+                <textarea
+                  value={rawInput}
+                  onChange={(event) => setRawInput(event.target.value)}
+                  placeholder="粘贴 Markdown、TXT 或 HTML 原文"
+                  rows={8}
+                />
+              </label>
+              <button className="primary-button" disabled={isImporting} onClick={runTextImport} type="button">
+                {isImporting ? "导入中..." : "导入文本"}
+              </button>
+            </div>
+
+            <div className="control-block">
+              <strong className="block-title">文件导入</strong>
+              <label className="upload-field">
+                <span>支持 MD / TXT / HTML / DOCX</span>
+                <input accept=".md,.markdown,.txt,.html,.htm,.docx,.doc" onChange={onFileImport} type="file" />
+              </label>
+            </div>
+
+            <div className={importStatus === "error" ? "status-box error" : importStatus === "success" ? "status-box success" : "status-box"}>
+              {importMessage}
+            </div>
+
             <label className="field">
               <span>项目标题</span>
               <input
@@ -130,6 +300,10 @@ export function WorkspacePage() {
             <p>
               <strong>当前模板：</strong>
               {currentProject.styleTemplateId}
+            </p>
+            <p>
+              <strong>导入来源：</strong>
+              {currentProject.sourceName ?? currentProject.sourceUrl ?? currentProject.sourceType}
             </p>
             <p>
               <strong>创建时间：</strong>

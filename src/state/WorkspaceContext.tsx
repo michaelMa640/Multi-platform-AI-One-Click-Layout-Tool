@@ -11,6 +11,7 @@ import type { ArticleProject, WorkspaceContextValue, WorkspaceState } from "../t
 
 type WorkspaceAction =
   | { type: "createProject"; payload: { project: ArticleProject } }
+  | { type: "importProject"; payload: { project: ArticleProject } }
   | { type: "selectProject"; payload: { projectId: string } }
   | {
       type: "updateProjectMeta";
@@ -26,6 +27,7 @@ type WorkspaceAction =
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
     case "createProject":
+    case "importProject":
       return {
         ...state,
         currentProjectId: action.payload.project.id,
@@ -94,6 +96,9 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       createProject: () => {
         const templateId = state.templates[0]?.id ?? "magazine-editorial";
         dispatch({ type: "createProject", payload: { project: createSeedProject(templateId) } });
+      },
+      importProject: (project) => {
+        dispatch({ type: "importProject", payload: { project } });
       },
       selectProject: (projectId) => {
         dispatch({ type: "selectProject", payload: { projectId } });

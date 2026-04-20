@@ -38,6 +38,8 @@ export type ReviewIssueType =
   | "consistency"
   | "style";
 
+export type ImportStatus = "idle" | "success" | "error";
+
 export type TemplateKind = "builtin" | "extracted" | "variant" | "draft";
 
 export type TemplateStatus = "active" | "disabled" | "draft";
@@ -88,6 +90,7 @@ export type ArticleProject = {
   sourceType: SourceType;
   title: string;
   summary: string;
+  sourceName?: string;
   sourceUrl?: string;
   coverImage?: string;
   tags: string[];
@@ -139,6 +142,7 @@ export type WorkspaceState = {
 export type WorkspaceContextValue = WorkspaceState & {
   currentProject: ArticleProject | undefined;
   createProject: () => void;
+  importProject: (project: ArticleProject) => void;
   selectProject: (projectId: string) => void;
   updateProjectMeta: (
     patch: Partial<Pick<ArticleProject, "title" | "summary" | "sourceType" | "sourceUrl">>,
