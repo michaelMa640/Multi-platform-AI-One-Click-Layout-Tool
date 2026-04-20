@@ -1,7 +1,9 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useMemo, useState } from "react";
+import { restructureArticle } from "../ai/restructureArticle";
 import { ArticlePreview } from "../components/workspace/ArticlePreview";
 import { SectionEditorCard } from "../components/workspace/SectionEditorCard";
 import { importArticle } from "../importers/articleImporter";
+import { loadAISettings } from "../lib/aiSettingsStorage";
 import { useWorkspace } from "../state/WorkspaceContext";
 import type { ImportStatus, MetricCard, SourceType } from "../types";
 
@@ -22,6 +24,7 @@ export function WorkspacePage() {
     updateProjectTags,
     updateProjectTemplate,
     updateProjectSection,
+    applyProjectDraft,
     addProjectSection,
     removeProjectSection,
     moveProjectSection,
@@ -33,7 +36,11 @@ export function WorkspacePage() {
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [importMessage, setImportMessage] = useState("准备好导入原始内容。");
   const [isImporting, setIsImporting] = useState(false);
+  const [aiStatus, setAiStatus] = useState<ImportStatus>("idle");
+  const [aiMessage, setAiMessage] = useState("当前还没有执行 AI 重组。");
+  const [isGenerating, setIsGenerating] = useState(false);
   const deferredProject = useDeferredValue(currentProject);
+  const aiSettings = loadAISettings();
 
   const activeTemplate = useMemo(
     () => templates.find((template) => template.id === currentProject?.styleTemplateId),
@@ -142,6 +149,37 @@ export function WorkspacePage() {
     }
   };
 
+  const runAiRestructure = async () => {
+    if (!currentProject) {
+      return;
+    }
+
+    setIsGenerating(true);
+    setAiStatus("idle");
+    setAiMessage("AI 正在重组当前文章结构...");
+
+    try {
+      const draft = await restructureArticle(currentProject, aiSettings);
+
+      startTransition(() => {
+        applyProjectDraft({
+          title: draft.title,
+          summary: draft.summary,
+          tags: draft.tags,
+          sections: draft.sections,
+        });
+      });
+
+      setAiStatus("success");
+      setAiMessage(`已完成 AI 重组，当前结果来自 ${draft.providerLabel}。`);
+    } catch (error) {
+      setAiStatus("error");
+      setAiMessage(error instanceof Error ? error.message : "AI 重组失败。");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <section className="page-grid workspace-grid">
       <div className="hero-card">
@@ -247,6 +285,20 @@ export function WorkspacePage() {
 
             <div className={importStatus === "error" ? "status-box error" : importStatus === "success" ? "status-box success" : "status-box"}>
               {importMessage}
+            </div>
+
+            <div className="control-block">
+              <strong className="block-title">AI 重组</strong>
+              <p className="inline-note">
+                当前 provider：{aiSettings.provider}
+                {aiSettings.provider === "openai-compatible" ? ` / ${aiSettings.model}` : " / 本机演示模式"}
+              </p>
+              <button className="primary-button" disabled={isGenerating} onClick={runAiRestructure} type="button">
+                {isGenerating ? "重组中..." : "执行 AI 重组"}
+              </button>
+              <div className={aiStatus === "error" ? "status-box error" : aiStatus === "success" ? "status-box success" : "status-box"}>
+                {aiMessage}
+              </div>
             </div>
 
             <label className="field">

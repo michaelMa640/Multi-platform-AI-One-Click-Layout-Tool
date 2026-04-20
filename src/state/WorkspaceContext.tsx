@@ -30,6 +30,13 @@ type WorkspaceAction =
         patch: Partial<Pick<ArticleSection, "type" | "heading" | "body" | "points">>;
       };
     }
+  | {
+      type: "applyProjectDraft";
+      payload: {
+        projectId: string;
+        patch: Pick<ArticleProject, "title" | "summary" | "tags" | "sections">;
+      };
+    }
   | { type: "addProjectSection"; payload: { projectId: string; section: ArticleSection } }
   | { type: "removeProjectSection"; payload: { projectId: string; sectionId: string } }
   | { type: "moveProjectSection"; payload: { projectId: string; sectionId: string; direction: "up" | "down" } }
@@ -90,6 +97,12 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
               }
             : section,
         ),
+        updatedAt: new Date().toISOString(),
+      }));
+    case "applyProjectDraft":
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        ...action.payload.patch,
         updatedAt: new Date().toISOString(),
       }));
     case "addProjectSection":
@@ -205,6 +218,16 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         dispatch({
           type: "updateProjectSection",
           payload: { projectId: currentProject.id, sectionId, patch },
+        });
+      },
+      applyProjectDraft: (patch) => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "applyProjectDraft",
+          payload: { projectId: currentProject.id, patch },
         });
       },
       addProjectSection: () => {

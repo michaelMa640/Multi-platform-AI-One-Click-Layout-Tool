@@ -55,6 +55,8 @@ export type PlatformName =
 
 export type PlatformFormat = "html" | "article" | "carousel" | "image_set";
 
+export type AIProvider = "mock" | "openai-compatible";
+
 export type ArticleSection = {
   id: string;
   type: SectionType;
@@ -153,9 +155,21 @@ export type WorkspaceContextValue = WorkspaceState & {
     sectionId: string,
     patch: Partial<Pick<ArticleSection, "type" | "heading" | "body" | "points">>,
   ) => void;
+  applyProjectDraft: (
+    patch: Pick<ArticleProject, "title" | "summary" | "tags" | "sections">,
+  ) => void;
   addProjectSection: () => void;
   removeProjectSection: (sectionId: string) => void;
   moveProjectSection: (sectionId: string, direction: "up" | "down") => void;
   saveWorkspace: () => void;
   resetWorkspace: () => void;
+};
+
+export type AISettings = {
+  provider: AIProvider;
+  model: string;
+  apiKey: string;
+  baseUrl: string;
+  temperature: number;
+  systemPrompt: string;
 };

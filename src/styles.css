@@ -344,6 +344,10 @@ button {
   margin-top: 10px;
 }
 
+.feature-list {
+  line-height: 1.7;
+}
+
 .form-stack,
 .section-stack {
   display: flex;
@@ -389,6 +393,12 @@ button {
 
 .field textarea {
   resize: vertical;
+}
+
+.inline-note {
+  margin: 0;
+  color: #647365;
+  font-size: 13px;
 }
 
 .upload-field {
@@ -568,6 +578,10 @@ button {
 .setting-list {
   display: grid;
   gap: 12px;
+}
+
+.setting-list.compact {
+  margin-top: 18px;
 }
 
 .setting-row {
