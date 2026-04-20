@@ -44,6 +44,8 @@ export type TemplateKind = "builtin" | "extracted" | "variant" | "draft";
 
 export type TemplateStatus = "active" | "disabled" | "draft";
 
+export type TemplateLayout = "editorial" | "cards" | "spotlight";
+
 export type PlatformName =
   | "wechat"
   | "xiaohongshu"
@@ -117,8 +119,10 @@ export type TemplateDefinition = {
   name: string;
   kind: TemplateKind;
   status: TemplateStatus;
+  layout: TemplateLayout;
   summary: string;
   useCases: string[];
+  components: string[];
   supportsExtraction: boolean;
   theme: TemplateTheme;
   createdAt: string;
@@ -151,6 +155,8 @@ export type WorkspaceContextValue = WorkspaceState & {
   ) => void;
   updateProjectTags: (tags: string[]) => void;
   updateProjectTemplate: (templateId: string) => void;
+  updateTemplateStatus: (templateId: string, status: TemplateStatus) => void;
+  duplicateTemplate: (templateId: string) => void;
   updateProjectSection: (
     sectionId: string,
     patch: Partial<Pick<ArticleSection, "type" | "heading" | "body" | "points">>,

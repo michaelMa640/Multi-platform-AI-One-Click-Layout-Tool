@@ -7,7 +7,7 @@ import {
 } from "react";
 import { createInitialWorkspaceState, createSeedProject, toPersistedWorkspace } from "../data/seed";
 import { clearWorkspaceState, loadWorkspaceState, saveWorkspaceState } from "../lib/workspaceStorage";
-import type { ArticleProject, ArticleSection, WorkspaceContextValue, WorkspaceState } from "../types";
+import type { ArticleProject, ArticleSection, TemplateDefinition, TemplateStatus, WorkspaceContextValue, WorkspaceState } from "../types";
 
 type WorkspaceAction =
   | { type: "createProject"; payload: { project: ArticleProject } }
@@ -22,6 +22,8 @@ type WorkspaceAction =
     }
   | { type: "updateProjectTags"; payload: { projectId: string; tags: string[] } }
   | { type: "updateProjectTemplate"; payload: { projectId: string; templateId: string } }
+  | { type: "updateTemplateStatus"; payload: { templateId: string; status: TemplateStatus } }
+  | { type: "duplicateTemplate"; payload: { template: TemplateDefinition } }
   | {
       type: "updateProjectSection";
       payload: {
@@ -51,6 +53,16 @@ function patchProject(
   return {
     ...state,
     projects: state.projects.map((project) => (project.id === projectId ? patcher(project) : project)),
+  };
+}
+
+function patchTemplates(
+  state: WorkspaceState,
+  patcher: (templates: TemplateDefinition[]) => TemplateDefinition[],
+) {
+  return {
+    ...state,
+    templates: patcher(state.templates),
   };
 }
 
@@ -86,6 +98,20 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         styleTemplateId: action.payload.templateId,
         updatedAt: new Date().toISOString(),
       }));
+    case "updateTemplateStatus":
+      return patchTemplates(state, (templates) =>
+        templates.map((template) =>
+          template.id === action.payload.templateId
+            ? {
+                ...template,
+                status: action.payload.status,
+                updatedAt: new Date().toISOString(),
+              }
+            : template,
+        ),
+      );
+    case "duplicateTemplate":
+      return patchTemplates(state, (templates) => [action.payload.template, ...templates]);
     case "updateProjectSection":
       return patchProject(state, action.payload.projectId, (project) => ({
         ...project,
@@ -208,6 +234,34 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         dispatch({
           type: "updateProjectTemplate",
           payload: { projectId: currentProject.id, templateId },
+        });
+      },
+      updateTemplateStatus: (templateId, status) => {
+        dispatch({
+          type: "updateTemplateStatus",
+          payload: { templateId, status },
+        });
+      },
+      duplicateTemplate: (templateId) => {
+        const template = state.templates.find((item) => item.id === templateId);
+
+        if (!template) {
+          return;
+        }
+
+        dispatch({
+          type: "duplicateTemplate",
+          payload: {
+            template: {
+              ...template,
+              id: crypto.randomUUID(),
+              name: `${template.name} 副本`,
+              kind: "variant",
+              status: "draft",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          },
         });
       },
       updateProjectSection: (sectionId, patch) => {
