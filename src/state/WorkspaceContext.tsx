@@ -12,6 +12,7 @@ import type { ArticleProject, ArticleSection, TemplateDefinition, TemplateStatus
 type WorkspaceAction =
   | { type: "createProject"; payload: { project: ArticleProject } }
   | { type: "importProject"; payload: { project: ArticleProject } }
+  | { type: "addTemplate"; payload: { template: TemplateDefinition } }
   | { type: "selectProject"; payload: { projectId: string } }
   | {
       type: "updateProjectMeta";
@@ -75,6 +76,8 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         currentProjectId: action.payload.project.id,
         projects: [action.payload.project, ...state.projects],
       };
+    case "addTemplate":
+      return patchTemplates(state, (templates) => [action.payload.template, ...templates]);
     case "selectProject":
       return {
         ...state,
@@ -202,6 +205,9 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       },
       importProject: (project) => {
         dispatch({ type: "importProject", payload: { project } });
+      },
+      addTemplate: (template) => {
+        dispatch({ type: "addTemplate", payload: { template } });
       },
       selectProject: (projectId) => {
         dispatch({ type: "selectProject", payload: { projectId } });

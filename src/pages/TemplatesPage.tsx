@@ -1,16 +1,23 @@
 import { useMemo, useState } from "react";
 import { ArticlePreview } from "../components/workspace/ArticlePreview";
+import { extractTemplateFromUrl } from "../templates/extractTemplate";
 import { useWorkspace } from "../state/WorkspaceContext";
+import type { ImportStatus } from "../types";
 
 export function TemplatesPage() {
   const {
     templates,
     currentProject,
+    addTemplate,
     updateProjectTemplate,
     updateTemplateStatus,
     duplicateTemplate,
   } = useWorkspace();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id ?? "");
+  const [extractUrl, setExtractUrl] = useState("");
+  const [extractStatus, setExtractStatus] = useState<ImportStatus>("idle");
+  const [extractMessage, setExtractMessage] = useState("输入一个页面链接后，系统会判断是否适合抽取为模板。");
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const selectedTemplate = useMemo(
     () => templates.find((item) => item.id === selectedTemplateId) ?? templates[0],
@@ -18,6 +25,33 @@ export function TemplatesPage() {
   );
 
   const activeCount = templates.filter((item) => item.status === "active").length;
+
+  const runExtraction = async () => {
+    setIsExtracting(true);
+    setExtractStatus("idle");
+    setExtractMessage("正在分析链接结构，判断是否适合抽取为模板...");
+
+    try {
+      const result = await extractTemplateFromUrl(extractUrl);
+
+      if (!result.ok) {
+        setExtractStatus("error");
+        setExtractMessage(result.reason);
+        return;
+      }
+
+      addTemplate(result.template);
+      setSelectedTemplateId(result.template.id);
+      setExtractStatus("success");
+      setExtractMessage(`${result.reason} 已生成模板草稿：${result.template.name}`);
+      setExtractUrl("");
+    } catch (error) {
+      setExtractStatus("error");
+      setExtractMessage(error instanceof Error ? error.message : "模板提取失败。");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
 
   return (
     <section className="page-grid">
@@ -48,15 +82,40 @@ export function TemplatesPage() {
 
         <article className="panel-card">
           <div className="panel-heading">
-            <p className="eyebrow">RULES</p>
-            <h4>当前模板管理范围</h4>
+            <p className="eyebrow">TEMPLATE EXTRACTION</p>
+            <h4>链接模板提取入口</h4>
           </div>
-          <ul className="feature-list">
-            <li>可查看模板布局类型、组件清单与适用场景。</li>
-            <li>可直接将模板套用到当前项目，实时查看预览结构变化。</li>
-            <li>支持复制模板和启用/停用模板，便于后续做模板变体。</li>
-            <li>模板提取入口仍保留在下一阶段继续完善。</li>
-          </ul>
+          <div className="form-stack">
+            <label className="field">
+              <span>页面链接</span>
+              <input
+                type="url"
+                value={extractUrl}
+                onChange={(event) => setExtractUrl(event.target.value)}
+                placeholder="https://..."
+              />
+            </label>
+            <button className="primary-button" disabled={isExtracting} onClick={runExtraction} type="button">
+              {isExtracting ? "提取中..." : "提取模板"}
+            </button>
+            <div
+              className={
+                extractStatus === "error"
+                  ? "status-box error"
+                  : extractStatus === "success"
+                    ? "status-box success"
+                    : "status-box"
+              }
+            >
+              {extractMessage}
+            </div>
+            <ul className="feature-list">
+              <li>当前先用启发式规则判断页面结构是否稳定。</li>
+              <li>可提取时会生成模板草稿，并自动加入模板列表。</li>
+              <li>不适合提取时会明确说明失败原因，不做静默失败。</li>
+              <li>某些页面可能受浏览器跨域限制，后续可迁移到 Tauri / Rust 侧抓取。</li>
+            </ul>
+          </div>
         </article>
       </div>
 

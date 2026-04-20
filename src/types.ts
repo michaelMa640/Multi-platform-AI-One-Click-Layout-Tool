@@ -149,6 +149,7 @@ export type WorkspaceContextValue = WorkspaceState & {
   currentProject: ArticleProject | undefined;
   createProject: () => void;
   importProject: (project: ArticleProject) => void;
+  addTemplate: (template: TemplateDefinition) => void;
   selectProject: (projectId: string) => void;
   updateProjectMeta: (
     patch: Partial<Pick<ArticleProject, "title" | "summary" | "sourceType" | "sourceUrl">>,
