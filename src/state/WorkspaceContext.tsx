@@ -55,6 +55,15 @@ type WorkspaceAction =
         reviewResult: ReviewResult;
       };
     }
+  | {
+      type: "updatePlatformVariantStatus";
+      payload: {
+        projectId: string;
+        platform: ArticleProject["platformVariants"][number]["platform"];
+        format: ArticleProject["platformVariants"][number]["format"];
+        status: ArticleProject["platformVariants"][number]["status"];
+      };
+    }
   | { type: "addProjectSection"; payload: { projectId: string; section: ArticleSection } }
   | { type: "removeProjectSection"; payload: { projectId: string; sectionId: string } }
   | { type: "moveProjectSection"; payload: { projectId: string; sectionId: string; direction: "up" | "down" } }
@@ -153,6 +162,19 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return patchProject(state, action.payload.projectId, (project) => ({
         ...project,
         reviewResult: action.payload.reviewResult,
+        updatedAt: new Date().toISOString(),
+      }));
+    case "updatePlatformVariantStatus":
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        platformVariants: project.platformVariants.map((variant) =>
+          variant.platform === action.payload.platform && variant.format === action.payload.format
+            ? {
+                ...variant,
+                status: action.payload.status,
+              }
+            : variant,
+        ),
         updatedAt: new Date().toISOString(),
       }));
     case "addProjectSection":
@@ -319,6 +341,16 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         dispatch({
           type: "updateProjectReviewResult",
           payload: { projectId: currentProject.id, reviewResult },
+        });
+      },
+      updatePlatformVariantStatus: (platform, format, status) => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "updatePlatformVariantStatus",
+          payload: { projectId: currentProject.id, platform, format, status },
         });
       },
       addProjectSection: () => {

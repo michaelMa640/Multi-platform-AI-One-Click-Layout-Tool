@@ -897,6 +897,23 @@ button {
   margin-top: 18px;
 }
 
+.exports-layout {
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+  align-items: flex-start;
+}
+
+.export-preview-card {
+  min-height: 100%;
+}
+
+.export-output {
+  min-height: 420px;
+  font-family: "SFMono-Regular", "Menlo", "Monaco", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
 .editor-panel {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 249, 242, 0.96));
 }

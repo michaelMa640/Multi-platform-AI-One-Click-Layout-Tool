@@ -166,6 +166,11 @@ export type WorkspaceContextValue = WorkspaceState & {
     patch: Pick<ArticleProject, "title" | "summary" | "tags" | "sections">,
   ) => void;
   updateProjectReviewResult: (reviewResult: ReviewResult) => void;
+  updatePlatformVariantStatus: (
+    platform: PlatformName,
+    format: PlatformFormat,
+    status: PlatformVariant["status"],
+  ) => void;
   addProjectSection: () => void;
   removeProjectSection: (sectionId: string) => void;
   moveProjectSection: (sectionId: string, direction: "up" | "down") => void;
