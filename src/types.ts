@@ -148,6 +148,14 @@ export type WorkspaceContextValue = WorkspaceState & {
     patch: Partial<Pick<ArticleProject, "title" | "summary" | "sourceType" | "sourceUrl">>,
   ) => void;
   updateProjectTags: (tags: string[]) => void;
+  updateProjectTemplate: (templateId: string) => void;
+  updateProjectSection: (
+    sectionId: string,
+    patch: Partial<Pick<ArticleSection, "type" | "heading" | "body" | "points">>,
+  ) => void;
+  addProjectSection: () => void;
+  removeProjectSection: (sectionId: string) => void;
+  moveProjectSection: (sectionId: string, direction: "up" | "down") => void;
   saveWorkspace: () => void;
   resetWorkspace: () => void;
 };

@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
+import { ArticlePreview } from "../components/workspace/ArticlePreview";
+import { SectionEditorCard } from "../components/workspace/SectionEditorCard";
 import { importArticle } from "../importers/articleImporter";
 import { useWorkspace } from "../state/WorkspaceContext";
 import type { ImportStatus, MetricCard, SourceType } from "../types";
@@ -18,6 +20,11 @@ export function WorkspacePage() {
     selectProject,
     updateProjectMeta,
     updateProjectTags,
+    updateProjectTemplate,
+    updateProjectSection,
+    addProjectSection,
+    removeProjectSection,
+    moveProjectSection,
     resetWorkspace,
   } = useWorkspace();
   const [textSourceType, setTextSourceType] = useState<Extract<SourceType, "markdown" | "txt" | "html">>("markdown");
@@ -26,26 +33,32 @@ export function WorkspacePage() {
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [importMessage, setImportMessage] = useState("准备好导入原始内容。");
   const [isImporting, setIsImporting] = useState(false);
+  const deferredProject = useDeferredValue(currentProject);
+
+  const activeTemplate = useMemo(
+    () => templates.find((template) => template.id === currentProject?.styleTemplateId),
+    [currentProject?.styleTemplateId, templates],
+  );
 
   const metrics: MetricCard[] = useMemo(
     () => [
       {
         label: "项目状态",
-        value: currentProject ? "已接入存储" : "未加载",
-        detail: "Step 2 / 统一数据结构 + localStorage",
+        value: currentProject ? "编辑中" : "未加载",
+        detail: "Step 4 / 结构化编辑 + 实时预览",
       },
       {
-        label: "可用模板",
-        value: `${templates.length} 套`,
-        detail: "内置模板数据已进入 store",
+        label: "当前模板",
+        value: activeTemplate?.name ?? "未选择",
+        detail: `${templates.length} 套模板可切换预览`,
       },
       {
-        label: "导入源",
-        value: "6 类",
-        detail: "URL / MD / TXT / HTML / DOCX / DOC",
+        label: "章节数量",
+        value: `${currentProject?.sections.length ?? 0} 个`,
+        detail: "支持正文、引用、高亮、结尾等类型",
       },
     ],
-    [currentProject, templates.length],
+    [activeTemplate?.name, currentProject, templates.length],
   );
 
   if (!currentProject) {
@@ -134,9 +147,9 @@ export function WorkspacePage() {
       <div className="hero-card">
         <div className="hero-copy">
           <p className="eyebrow">WORKSPACE</p>
-          <h3>把“导入内容、结构化编辑、预览结果”三栏关系先固定下来</h3>
+          <h3>把“导入内容、结构化编辑、实时预览”真正连成一条可操作主链路</h3>
           <p>
-            这是 Step 1 的骨架页面，用来承接后续的内容解析、AI 重组、模板切换和导出逻辑。
+            现在工作台已经不只是页面壳。你可以直接修改项目标题、章节结构和正文内容，右侧预览会同步反映当前稿件效果。
           </p>
         </div>
 
@@ -267,59 +280,63 @@ export function WorkspacePage() {
                 type="text"
               />
             </label>
+            <label className="field">
+              <span>预览模板</span>
+              <select
+                value={currentProject.styleTemplateId}
+                onChange={(event) => updateProjectTemplate(event.target.value)}
+              >
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button className="ghost-button" onClick={resetWorkspace} type="button">
               重置为示例数据
             </button>
           </div>
         </article>
 
-        <article className="panel-card emphasis">
+        <article className="panel-card editor-panel">
           <div className="panel-heading">
             <p className="eyebrow">CENTER</p>
-            <h4>结构化章节数据</h4>
+            <h4>结构化编辑区</h4>
+          </div>
+          <p className="panel-copy editor-panel-copy">
+            这里直接编辑章节类型、标题、正文和要点，右侧预览会实时刷新。
+          </p>
+          <div className="editor-toolbar">
+            <button className="primary-button" onClick={addProjectSection} type="button">
+              新增章节
+            </button>
+            <span className="editor-toolbar-note">支持上移、下移和删除章节，方便快速调整文章节奏。</span>
           </div>
           <div className="section-stack">
             {currentProject.sections.map((section, index) => (
-              <article key={section.id} className="section-card">
-                <span className="section-badge">{`0${index + 1}`}</span>
-                <div>
-                  <h5>{section.heading ?? "未命名章节"}</h5>
-                  <p>{section.body}</p>
-                </div>
-              </article>
+              <SectionEditorCard
+                key={section.id}
+                index={index}
+                section={section}
+                total={currentProject.sections.length}
+                onChange={(patch) => updateProjectSection(section.id, patch)}
+                onMove={(direction) => moveProjectSection(section.id, direction)}
+                onRemove={() => removeProjectSection(section.id)}
+              />
             ))}
           </div>
         </article>
 
-        <article className="panel-card">
+        <article className="panel-card preview-panel">
           <div className="panel-heading">
             <p className="eyebrow">RIGHT</p>
-            <h4>项目存储快照</h4>
+            <h4>实时预览</h4>
           </div>
-          <div className="snapshot-card">
-            <p>
-              <strong>当前模板：</strong>
-              {currentProject.styleTemplateId}
-            </p>
-            <p>
-              <strong>导入来源：</strong>
-              {currentProject.sourceName ?? currentProject.sourceUrl ?? currentProject.sourceType}
-            </p>
-            <p>
-              <strong>创建时间：</strong>
-              {new Date(currentProject.createdAt).toLocaleString("zh-CN")}
-            </p>
-            <p>
-              <strong>更新时间：</strong>
-              {new Date(currentProject.updatedAt).toLocaleString("zh-CN")}
-            </p>
-            <p>
-              <strong>平台变体：</strong>
-              {currentProject.platformVariants
-                .map((item) => `${item.platform}/${item.format}`)
-                .join("、")}
-            </p>
-          </div>
+          <p className="panel-copy preview-panel-copy">
+            当前模板、标题、摘要和章节内容都会立即体现在预览稿上，方便下一步接 AI 重组和 HTML 导出。
+          </p>
+          <ArticlePreview project={deferredProject ?? currentProject} template={activeTemplate} />
         </article>
       </div>
     </section>

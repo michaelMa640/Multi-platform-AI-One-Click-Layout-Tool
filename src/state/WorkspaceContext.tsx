@@ -7,7 +7,7 @@ import {
 } from "react";
 import { createInitialWorkspaceState, createSeedProject, toPersistedWorkspace } from "../data/seed";
 import { clearWorkspaceState, loadWorkspaceState, saveWorkspaceState } from "../lib/workspaceStorage";
-import type { ArticleProject, WorkspaceContextValue, WorkspaceState } from "../types";
+import type { ArticleProject, ArticleSection, WorkspaceContextValue, WorkspaceState } from "../types";
 
 type WorkspaceAction =
   | { type: "createProject"; payload: { project: ArticleProject } }
@@ -21,8 +21,31 @@ type WorkspaceAction =
       };
     }
   | { type: "updateProjectTags"; payload: { projectId: string; tags: string[] } }
+  | { type: "updateProjectTemplate"; payload: { projectId: string; templateId: string } }
+  | {
+      type: "updateProjectSection";
+      payload: {
+        projectId: string;
+        sectionId: string;
+        patch: Partial<Pick<ArticleSection, "type" | "heading" | "body" | "points">>;
+      };
+    }
+  | { type: "addProjectSection"; payload: { projectId: string; section: ArticleSection } }
+  | { type: "removeProjectSection"; payload: { projectId: string; sectionId: string } }
+  | { type: "moveProjectSection"; payload: { projectId: string; sectionId: string; direction: "up" | "down" } }
   | { type: "save"; payload: { savedAt: string } }
   | { type: "reset"; payload: { state: WorkspaceState } };
+
+function patchProject(
+  state: WorkspaceState,
+  projectId: string,
+  patcher: (project: ArticleProject) => ArticleProject,
+) {
+  return {
+    ...state,
+    projects: state.projects.map((project) => (project.id === projectId ? patcher(project) : project)),
+  };
+}
 
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -39,31 +62,72 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         currentProjectId: action.payload.projectId,
       };
     case "updateProjectMeta":
-      return {
-        ...state,
-        projects: state.projects.map((project) =>
-          project.id === action.payload.projectId
-            ? {
-                ...project,
-                ...action.payload.patch,
-                updatedAt: new Date().toISOString(),
-              }
-            : project,
-        ),
-      };
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        ...action.payload.patch,
+        updatedAt: new Date().toISOString(),
+      }));
     case "updateProjectTags":
-      return {
-        ...state,
-        projects: state.projects.map((project) =>
-          project.id === action.payload.projectId
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        tags: action.payload.tags,
+        updatedAt: new Date().toISOString(),
+      }));
+    case "updateProjectTemplate":
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        styleTemplateId: action.payload.templateId,
+        updatedAt: new Date().toISOString(),
+      }));
+    case "updateProjectSection":
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        sections: project.sections.map((section) =>
+          section.id === action.payload.sectionId
             ? {
-                ...project,
-                tags: action.payload.tags,
-                updatedAt: new Date().toISOString(),
+                ...section,
+                ...action.payload.patch,
               }
-            : project,
+            : section,
         ),
-      };
+        updatedAt: new Date().toISOString(),
+      }));
+    case "addProjectSection":
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        sections: [...project.sections, action.payload.section],
+        updatedAt: new Date().toISOString(),
+      }));
+    case "removeProjectSection":
+      return patchProject(state, action.payload.projectId, (project) => ({
+        ...project,
+        sections: project.sections.filter((section) => section.id !== action.payload.sectionId),
+        updatedAt: new Date().toISOString(),
+      }));
+    case "moveProjectSection":
+      return patchProject(state, action.payload.projectId, (project) => {
+        const index = project.sections.findIndex((section) => section.id === action.payload.sectionId);
+
+        if (index === -1) {
+          return project;
+        }
+
+        const targetIndex = action.payload.direction === "up" ? index - 1 : index + 1;
+
+        if (targetIndex < 0 || targetIndex >= project.sections.length) {
+          return project;
+        }
+
+        const sections = [...project.sections];
+        const [moved] = sections.splice(index, 1);
+        sections.splice(targetIndex, 0, moved);
+
+        return {
+          ...project,
+          sections,
+          updatedAt: new Date().toISOString(),
+        };
+      });
     case "save":
       return {
         ...state,
@@ -121,6 +185,65 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         dispatch({
           type: "updateProjectTags",
           payload: { projectId: currentProject.id, tags },
+        });
+      },
+      updateProjectTemplate: (templateId) => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "updateProjectTemplate",
+          payload: { projectId: currentProject.id, templateId },
+        });
+      },
+      updateProjectSection: (sectionId, patch) => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "updateProjectSection",
+          payload: { projectId: currentProject.id, sectionId, patch },
+        });
+      },
+      addProjectSection: () => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "addProjectSection",
+          payload: {
+            projectId: currentProject.id,
+            section: {
+              id: crypto.randomUUID(),
+              type: "content",
+              heading: `新增章节 ${currentProject.sections.length + 1}`,
+              body: "在这里继续补充正文内容。",
+              points: [],
+            },
+          },
+        });
+      },
+      removeProjectSection: (sectionId) => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "removeProjectSection",
+          payload: { projectId: currentProject.id, sectionId },
+        });
+      },
+      moveProjectSection: (sectionId, direction) => {
+        if (!currentProject) {
+          return;
+        }
+
+        dispatch({
+          type: "moveProjectSection",
+          payload: { projectId: currentProject.id, sectionId, direction },
         });
       },
       saveWorkspace: () => {
